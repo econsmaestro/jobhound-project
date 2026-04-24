@@ -1,0 +1,20 @@
+[project]
+name = "python-template"
+version = "0.1.0"
+description = ""
+authors = ["Your Name <you@example.com>"]
+requires-python = ">=3.11"
+dependencies = [
+    "firecrawl>=2.5.4",
+    "flask>=3.1.0",
+    "langchain-community>=0.3.23",
+    "langchain>=0.3.25",
+    "python-dotenv>=1.1.0",
+    "flask-limiter>=3.12",
+    "openai>=1.78.1",
+    "langchain-openai>=0.3.35",
+    "langchain-groq>=0.3.8",
+    "markdown>=3.10.2",
+    "gunicorn>=25.3.0",
+    "replit-connectors",
+]
