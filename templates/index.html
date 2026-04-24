@@ -2,37 +2,83 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>JobHound: Smart Job Search with AI</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <title>JobHound — AI Job Summarizer</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         body {
             background-color: #f8f9fa;
-            padding-top: 50px;
+            padding-top: 24px;
+            padding-bottom: 48px;
         }
+
         .container {
-            max-width: 700px;
+            max-width: 680px;
+            padding-left: 16px;
+            padding-right: 16px;
         }
-        .jobhound-header {
+
+        .jh-header {
             text-align: center;
-            margin-bottom: 30px;
+            margin-bottom: 24px;
         }
-        .jobhound-header h1 {
-            font-weight: bold;
+        .jh-header .icon {
+            font-size: 2.2rem;
+            display: block;
+            line-height: 1;
+            margin-bottom: 8px;
         }
-        .emoji {
-            font-size: 2rem;
-            margin-right: 10px;
+        .jh-header h1 {
+            font-weight: 800;
+            font-size: clamp(1.4rem, 5vw, 2rem);
+            margin: 0;
+            line-height: 1.2;
         }
-        textarea {
-            white-space: pre-wrap;
+        .jh-header .tagline {
+            color: #6c757d;
+            font-size: 0.95rem;
+            margin-top: 6px;
         }
-        .job-summary h1, .job-summary h2, .job-summary h3 {
-            font-size: 1.1rem;
+
+        /* Larger tap targets on mobile */
+        .form-control, .form-select {
+            font-size: 16px;
+            padding: 0.55rem 0.75rem;
+        }
+        textarea.form-control {
+            font-size: 14px;
+        }
+        .form-label {
             font-weight: 600;
+            margin-bottom: 0.3rem;
+        }
+        .form-text {
+            font-size: 0.82rem;
+        }
+
+        /* Full-width button on mobile, normal on desktop */
+        .btn-submit {
+            width: 100%;
+            padding: 0.7rem 1.5rem;
+            font-size: 1.05rem;
+            font-weight: 600;
+        }
+        @media (min-width: 576px) {
+            .btn-submit {
+                width: auto;
+            }
+        }
+
+        /* Summary card */
+        .job-summary h1, .job-summary h2, .job-summary h3 {
+            font-size: 1rem;
+            font-weight: 700;
             margin-top: 1rem;
+            margin-bottom: 0.25rem;
         }
         .job-summary ul {
             padding-left: 1.2rem;
+            margin-bottom: 0.5rem;
         }
         .job-summary a {
             word-break: break-all;
@@ -40,33 +86,68 @@
         .job-summary p {
             margin-bottom: 0.4rem;
         }
-        #cookieSection .card-body {
-            transition: background-color 0.2s;
+
+        /* Cookie section */
+        #cookieSiteHint { display: none; }
+        .cookie-toggle-link {
+            font-size: 0.88rem;
+            text-decoration: none;
+            color: #6c757d;
         }
-        #cookieSiteHint {
+        .cookie-toggle-link:hover { color: #343a40; }
+
+        /* Info box */
+        .info-box {
+            background: #e8f4fd;
+            border: 1px solid #b8daff;
+            border-radius: 8px;
+            padding: 14px 16px;
+            margin-bottom: 20px;
+            font-size: 0.88rem;
+        }
+        .info-box strong { font-size: 0.93rem; }
+        .info-box ul {
+            margin: 6px 0 6px 0;
+            padding-left: 1.1rem;
+        }
+        .info-box li { margin-bottom: 2px; }
+
+        /* Spinner */
+        .spinner-text {
             display: none;
+            align-items: center;
+            gap: 10px;
+            color: #495057;
+            font-size: 0.95rem;
+            margin-top: 12px;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="jobhound-header">
-            <div class="emoji">🐾</div>
-            <h1>JobHound: Smart Job Search with AI</h1>
-        </div>
-        <div class="alert alert-info" role="alert">
-            <strong>Works with any job page — paste the URL and go:</strong>
-            <ul class="mb-1 mt-1">
-                <li><strong>Job boards</strong> — LinkedIn, Indeed, Glassdoor, RemoteOK, Monster, and more</li>
-                <li><strong>Company careers pages</strong> — e.g. <code>careers.google.com</code>, <code>apple.com/careers</code>, any company's hiring page</li>
-                <li><strong>Single listing or search results</strong> — both work</li>
-            </ul>
-            <small class="text-muted">Private LinkedIn listings need a session cookie — the field appears automatically when you paste a LinkedIn URL.</small>
+
+        <div class="jh-header">
+            <span class="icon">🐾</span>
+            <h1>JobHound</h1>
+            <div class="tagline">Paste a job URL — get an AI summary in seconds</div>
         </div>
 
-        <form method="POST" novalidate>
-            <div class="mb-3">
-                <label for="user_api_key" class="form-label fw-semibold">Groq API Key <span class="badge bg-success">Free</span></label>
+        <div class="info-box">
+            <strong>Works with any job page:</strong>
+            <ul>
+                <li><strong>Job boards</strong> — LinkedIn, Indeed, Glassdoor, RemoteOK &amp; more</li>
+                <li><strong>Company careers pages</strong> — e.g. <code>careers.google.com</code>, any /careers page</li>
+                <li><strong>Single listing or search results</strong> — both work</li>
+            </ul>
+            <span class="text-muted">Private LinkedIn listings need a session cookie — it appears automatically when you paste a LinkedIn URL.</span>
+        </div>
+
+        <form method="POST" novalidate id="mainForm">
+
+            <div class="mb-4">
+                <label for="user_api_key" class="form-label">
+                    Groq API Key <span class="badge bg-success" style="font-size:0.72rem">Free</span>
+                </label>
                 <input
                     type="password"
                     class="form-control"
@@ -75,142 +156,140 @@
                     placeholder="gsk_..."
                     required
                     autocomplete="off"
+                    inputmode="text"
                 >
-                <div class="form-text">
-                    🔒 Your key is never stored — it's only used for this request.<br>
-                    Don't have one? It's completely free and takes 2 minutes:
-                    <ol class="mt-1 mb-0">
-                        <li>Go to <a href="https://console.groq.com/keys" target="_blank" rel="noopener">console.groq.com/keys</a></li>
-                        <li>Sign up (free, no credit card needed), then click <strong>Create API Key</strong></li>
-                        <li>Copy and paste it here</li>
-                    </ol>
-                    <span class="text-success fw-semibold">100% free — Groq does not charge for API usage.</span>
+                <div class="form-text mt-1">
+                    🔒 Never stored — used only for this request. &nbsp;
+                    <a href="https://console.groq.com/keys" target="_blank" rel="noopener">Get a free key at console.groq.com/keys</a>
+                    — no credit card needed.
                 </div>
             </div>
 
-            <div class="mb-3">
-                <label for="job_url" class="form-label fw-semibold">Job URL</label>
+            <div class="mb-4">
+                <label for="job_url" class="form-label">Job URL</label>
                 <input
                     type="url"
                     class="form-control"
                     id="job_url"
                     name="job_url"
-                    placeholder="Paste a single job post or a search results page URL"
+                    placeholder="Paste job listing or search results URL here"
                     required
                     pattern="https?://.+"
+                    inputmode="url"
+                    autocorrect="off"
+                    autocapitalize="none"
+                    spellcheck="false"
                 >
-                <div class="form-text text-muted">Copy the URL from your browser's address bar</div>
+                <div class="form-text mt-1">Copy the URL from your browser's address bar</div>
             </div>
 
-            <div class="mb-3">
-                <a class="text-muted small" data-bs-toggle="collapse" href="#cookieSection" role="button"
-                   id="cookieToggle">
-                    🔓 Hitting a login wall? Click here to add your session cookie
+            <div class="mb-4">
+                <a class="cookie-toggle-link" data-bs-toggle="collapse" href="#cookieSection" role="button" id="cookieToggle">
+                    🔓 Hitting a login wall? Add your session cookie
                 </a>
                 <div class="collapse mt-2 {% if show_cookie_hint %}show{% endif %}" id="cookieSection">
                     <div class="card card-body bg-light border">
-                        <label for="session_cookie" class="form-label fw-semibold">
-                            Session Cookie <span class="badge bg-secondary">Optional</span>
+                        <label for="session_cookie" class="form-label">
+                            Session Cookie <span class="badge bg-secondary" style="font-size:0.7rem">Optional</span>
                         </label>
 
-                        <div id="cookieSiteHint" class="alert alert-warning py-2 px-3 mb-2 small"></div>
+                        <div id="cookieSiteHint" class="alert alert-warning py-2 px-3 mb-2" style="font-size:0.85rem"></div>
 
                         <textarea
                             class="form-control font-monospace"
                             id="session_cookie"
                             name="session_cookie"
                             rows="2"
-                            placeholder="Paste your cookie here, e.g. li_at=AQEDATj..."
+                            placeholder="e.g. li_at=AQEDATj..."
                             autocomplete="off"
+                            autocorrect="off"
+                            autocapitalize="none"
+                            spellcheck="false"
                         ></textarea>
 
-                        <div class="form-text mt-2">
-                            <strong>What is this?</strong> Some sites (like LinkedIn) won't show job listings unless you're logged in.
-                            Pasting your session cookie here lets the app read the page as you — your data is never stored.<br><br>
-
+                        <div class="form-text mt-2" id="cookieInstructions">
                             <div id="instructions-linkedin">
-                                <strong>How to get your LinkedIn cookie (30 seconds):</strong>
+                                <strong>Getting your LinkedIn cookie (30 sec, desktop browser only):</strong>
                                 <ol class="mt-1 mb-1">
-                                    <li>Open <strong>linkedin.com</strong> in your browser and make sure you're logged in</li>
-                                    <li>Press <strong>F12</strong> → click the <strong>Application</strong> tab</li>
-                                    <li>On the left expand <strong>Cookies</strong> → click <strong>https://www.linkedin.com</strong></li>
-                                    <li>Find the row named <code>li_at</code> — double-click its <strong>Value</strong> and copy it</li>
-                                    <li>Paste it above as: <code>li_at=PASTE_VALUE_HERE</code></li>
+                                    <li>Open <strong>linkedin.com</strong>, make sure you're logged in</li>
+                                    <li>Press <strong>F12</strong> → <strong>Application</strong> tab → <strong>Cookies</strong> → click the LinkedIn URL</li>
+                                    <li>Find <code>li_at</code> — double-click its <strong>Value</strong> and copy it</li>
+                                    <li>Paste it above as: <code>li_at=PASTE_HERE</code></li>
                                 </ol>
                             </div>
-
                             <div id="instructions-indeed" style="display:none">
-                                <strong>How to get your Indeed cookie (30 seconds):</strong>
+                                <strong>Getting your Indeed cookie (30 sec, desktop browser only):</strong>
                                 <ol class="mt-1 mb-1">
-                                    <li>Open <strong>indeed.com</strong> in your browser and make sure you're logged in</li>
-                                    <li>Press <strong>F12</strong> → click the <strong>Application</strong> tab</li>
-                                    <li>On the left expand <strong>Cookies</strong> → click the Indeed URL</li>
-                                    <li>Find the cookie named <code>CTK</code> — copy its <strong>Value</strong></li>
-                                    <li>Paste it above as: <code>CTK=PASTE_VALUE_HERE</code></li>
+                                    <li>Open <strong>indeed.com</strong>, make sure you're logged in</li>
+                                    <li>Press <strong>F12</strong> → <strong>Application</strong> → <strong>Cookies</strong> → click the Indeed URL</li>
+                                    <li>Find <code>CTK</code> — copy its <strong>Value</strong></li>
+                                    <li>Paste it above as: <code>CTK=PASTE_HERE</code></li>
                                 </ol>
                             </div>
-
                             <div id="instructions-glassdoor" style="display:none">
-                                <strong>How to get your Glassdoor cookie (30 seconds):</strong>
+                                <strong>Getting your Glassdoor cookie (30 sec, desktop browser only):</strong>
                                 <ol class="mt-1 mb-1">
-                                    <li>Open <strong>glassdoor.com</strong> in your browser and make sure you're logged in</li>
-                                    <li>Press <strong>F12</strong> → click the <strong>Application</strong> tab</li>
-                                    <li>On the left expand <strong>Cookies</strong> → click the Glassdoor URL</li>
-                                    <li>Find the cookie named <code>GSESSIONID</code> — copy its <strong>Value</strong></li>
-                                    <li>Paste it above as: <code>GSESSIONID=PASTE_VALUE_HERE</code></li>
+                                    <li>Open <strong>glassdoor.com</strong>, make sure you're logged in</li>
+                                    <li>Press <strong>F12</strong> → <strong>Application</strong> → <strong>Cookies</strong> → click the Glassdoor URL</li>
+                                    <li>Find <code>GSESSIONID</code> — copy its <strong>Value</strong></li>
+                                    <li>Paste it above as: <code>GSESSIONID=PASTE_HERE</code></li>
                                 </ol>
                             </div>
-
                             <div id="instructions-generic" style="display:none">
-                                <strong>How to get your session cookie (30 seconds):</strong>
+                                <strong>Getting your session cookie (30 sec, desktop browser only):</strong>
                                 <ol class="mt-1 mb-1">
-                                    <li>Open the job site in your browser and make sure you're logged in</li>
-                                    <li>Press <strong>F12</strong> → click the <strong>Application</strong> tab</li>
-                                    <li>On the left expand <strong>Cookies</strong> → click the site name</li>
-                                    <li>Find the main session cookie (usually named <code>session</code>, <code>auth_token</code>, or similar) — copy its <strong>Value</strong></li>
+                                    <li>Open the job site and make sure you're logged in</li>
+                                    <li>Press <strong>F12</strong> → <strong>Application</strong> → <strong>Cookies</strong> → click the site URL</li>
+                                    <li>Find the main session cookie and copy its <strong>Value</strong></li>
                                     <li>Paste it above as: <code>cookie_name=VALUE</code></li>
                                 </ol>
                             </div>
-
-                            <span class="text-muted">On mobile? Do this step on a computer — browser DevTools aren't available on phones.</span>
+                            <span class="text-muted">⚠️ This step requires a desktop browser — DevTools aren't available on phones.</span>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <button type="submit" class="btn btn-primary">Scrape & Summarize</button>
+            <button type="submit" class="btn btn-primary btn-submit" id="submitBtn">
+                Analyse Job
+            </button>
+            <div class="spinner-text" id="loadingMsg">
+                <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                Scraping &amp; summarising — this takes 15–30 seconds…
+            </div>
         </form>
 
-        <br>
-
         {% if summary %}
-            <div class="card border-success mt-4">
-                <div class="card-header bg-success text-white fw-semibold">📝 Job Summary</div>
-                <div class="card-body job-summary">
-                    {{ summary | safe }}
-                </div>
+        <div class="card border-success mt-4">
+            <div class="card-header bg-success text-white fw-semibold">📝 Job Summary</div>
+            <div class="card-body job-summary">
+                {{ summary | safe }}
             </div>
+        </div>
         {% endif %}
 
         {% if error %}
-            <div class="alert alert-danger" role="alert">
-                <strong>Error:</strong> {{ error }}
-            </div>
+        <div class="alert alert-danger mt-4" role="alert">
+            <strong>Something went wrong:</strong> {{ error }}
+        </div>
         {% endif %}
+
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        const jobUrlInput = document.getElementById('job_url');
+        const jobUrlInput  = document.getElementById('job_url');
         const cookieSection = document.getElementById('cookieSection');
         const cookieSiteHint = document.getElementById('cookieSiteHint');
         const bsCollapse = new bootstrap.Collapse(cookieSection, { toggle: false });
+        const submitBtn  = document.getElementById('submitBtn');
+        const loadingMsg = document.getElementById('loadingMsg');
 
-        const siteInstructions = {
-            linkedin: document.getElementById('instructions-linkedin'),
-            indeed:   document.getElementById('instructions-indeed'),
+        const allInstructions = {
+            linkedin:  document.getElementById('instructions-linkedin'),
+            indeed:    document.getElementById('instructions-indeed'),
             glassdoor: document.getElementById('instructions-glassdoor'),
-            generic:  document.getElementById('instructions-generic'),
+            generic:   document.getElementById('instructions-generic'),
         };
 
         function detectSite(url) {
@@ -220,41 +299,37 @@
             return null;
         }
 
+        const hints = {
+            linkedin:  '<strong>LinkedIn detected</strong> — private listings need your <code>li_at</code> cookie to load. Paste it below.',
+            indeed:    '<strong>Indeed detected</strong> — some listings need your <code>CTK</code> cookie. Paste it below if you hit a login wall.',
+            glassdoor: '<strong>Glassdoor detected</strong> — listings may need your <code>GSESSIONID</code> cookie. Paste it below.',
+        };
+
         function updateCookieUI(url) {
             const site = detectSite(url);
+            Object.values(allInstructions).forEach(el => el.style.display = 'none');
 
-            Object.values(siteInstructions).forEach(el => el.style.display = 'none');
-
-            if (site === 'linkedin') {
+            if (site) {
                 bsCollapse.show();
                 cookieSiteHint.style.display = 'block';
-                cookieSiteHint.innerHTML = '<strong>LinkedIn detected</strong> — private listings require your <code>li_at</code> session cookie to load. Paste it below.';
-                siteInstructions.linkedin.style.display = 'block';
-            } else if (site === 'indeed') {
-                bsCollapse.show();
-                cookieSiteHint.style.display = 'block';
-                cookieSiteHint.innerHTML = '<strong>Indeed detected</strong> — some listings may require your <code>CTK</code> session cookie. Paste it below if you hit a login wall.';
-                siteInstructions.indeed.style.display = 'block';
-            } else if (site === 'glassdoor') {
-                bsCollapse.show();
-                cookieSiteHint.style.display = 'block';
-                cookieSiteHint.innerHTML = '<strong>Glassdoor detected</strong> — listings may require your <code>GSESSIONID</code> cookie. Paste it below if you see a login screen.';
-                siteInstructions.glassdoor.style.display = 'block';
+                cookieSiteHint.innerHTML = hints[site];
+                allInstructions[site].style.display = 'block';
             } else {
                 cookieSiteHint.style.display = 'none';
-                siteInstructions.generic.style.display = 'block';
+                allInstructions.generic.style.display = 'block';
             }
         }
 
-        jobUrlInput.addEventListener('input', function () {
-            updateCookieUI(this.value);
-        });
-        jobUrlInput.addEventListener('paste', function () {
-            setTimeout(() => updateCookieUI(this.value), 50);
-        });
-
-        // On page load, if there's already a value (e.g. after form error), run detection
+        jobUrlInput.addEventListener('input', () => updateCookieUI(jobUrlInput.value));
+        jobUrlInput.addEventListener('paste', () => setTimeout(() => updateCookieUI(jobUrlInput.value), 50));
         if (jobUrlInput.value) updateCookieUI(jobUrlInput.value);
+
+        // Show loading state on submit
+        document.getElementById('mainForm').addEventListener('submit', function () {
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Working…';
+            loadingMsg.style.display = 'flex';
+        });
     </script>
 </body>
 </html>
