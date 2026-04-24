@@ -1,0 +1,10 @@
+__pycache__/
+  *.py[cod]
+  .env
+  .pythonlibs/
+  node_modules/
+  attached_assets/
+  package.json
+  package-lock.json
+  *.log
+  
