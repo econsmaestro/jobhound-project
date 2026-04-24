@@ -16,5 +16,4 @@ dependencies = [
     "langchain-groq>=0.3.8",
     "markdown>=3.10.2",
     "gunicorn>=25.3.0",
-    "replit-connectors",
 ]
