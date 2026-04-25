@@ -140,6 +140,11 @@
                 <li><strong>Single listing or search results</strong> — both work</li>
             </ul>
             <span class="text-muted">Private LinkedIn listings need a session cookie — it appears automatically when you paste a LinkedIn URL.</span>
+            <hr class="my-2" style="border-color:#d0e4f7;">
+            <span class="text-muted" style="font-size:0.83rem;">
+                <strong>Supported formats:</strong> standard HTML job pages with readable text.
+                <strong>Not supported:</strong> PDFs, image-only pages, or pages that require JavaScript to display any content.
+            </span>
         </div>
 
         <form method="POST" novalidate id="mainForm">
@@ -159,7 +164,7 @@
                     inputmode="text"
                 >
                 <div class="form-text mt-1">
-                    🔒 Never stored — used only for this request. &nbsp;
+                    🔒 Saved in your browser only — never sent to our servers beyond this request. &nbsp;
                     <a href="https://console.groq.com/keys" target="_blank" rel="noopener">Get a free key at console.groq.com/keys</a>
                     — no credit card needed.
                 </div>
@@ -206,42 +211,48 @@
                             autocapitalize="none"
                             spellcheck="false"
                         ></textarea>
+                        <div class="form-text mt-1" style="font-size:0.8rem;">
+                            🔒 Saved in your browser per site — auto-filled next time you use the same job board.
+                        </div>
 
                         <div class="form-text mt-2" id="cookieInstructions">
                             <div id="instructions-linkedin">
                                 <strong>Getting your LinkedIn cookie (30 sec, desktop browser only):</strong>
                                 <ol class="mt-1 mb-1">
-                                    <li>Open <strong>linkedin.com</strong>, make sure you're logged in</li>
-                                    <li>Press <strong>F12</strong> → <strong>Application</strong> tab → <strong>Cookies</strong> → click the LinkedIn URL</li>
+                                    <li>Open <strong>linkedin.com</strong> and make sure you're logged in</li>
+                                    <li>Right-click anywhere → <strong>Inspect</strong> (or press <strong>Ctrl+Shift+I</strong> / <strong>Cmd+Option+I</strong>)</li>
+                                    <li>Go to <strong>Application</strong> → <strong>Cookies</strong> → click the LinkedIn URL</li>
                                     <li>Find <code>li_at</code> — double-click its <strong>Value</strong> and copy it</li>
-                                    <li>Paste it above as: <code>li_at=PASTE_HERE</code></li>
+                                    <li>Paste the value into the field above (after <code>li_at=</code>, which is already filled in)</li>
                                 </ol>
                             </div>
                             <div id="instructions-indeed" style="display:none">
                                 <strong>Getting your Indeed cookie (30 sec, desktop browser only):</strong>
                                 <ol class="mt-1 mb-1">
-                                    <li>Open <strong>indeed.com</strong>, make sure you're logged in</li>
-                                    <li>Press <strong>F12</strong> → <strong>Application</strong> → <strong>Cookies</strong> → click the Indeed URL</li>
-                                    <li>Find <code>CTK</code> — copy its <strong>Value</strong></li>
-                                    <li>Paste it above as: <code>CTK=PASTE_HERE</code></li>
+                                    <li>Open <strong>indeed.com</strong> and make sure you're logged in</li>
+                                    <li>Right-click anywhere → <strong>Inspect</strong> (or press <strong>Ctrl+Shift+I</strong> / <strong>Cmd+Option+I</strong>)</li>
+                                    <li>Go to <strong>Application</strong> → <strong>Cookies</strong> → click the Indeed URL</li>
+                                    <li>Find <code>CTK</code> — double-click its <strong>Value</strong> and copy it</li>
+                                    <li>Paste the value into the field above (after <code>CTK=</code>, which is already filled in)</li>
                                 </ol>
                             </div>
                             <div id="instructions-glassdoor" style="display:none">
                                 <strong>Getting your Glassdoor cookie (30 sec, desktop browser only):</strong>
                                 <ol class="mt-1 mb-1">
-                                    <li>Open <strong>glassdoor.com</strong>, make sure you're logged in</li>
-                                    <li>Press <strong>F12</strong> → <strong>Application</strong> → <strong>Cookies</strong> → click the Glassdoor URL</li>
-                                    <li>Find <code>GSESSIONID</code> — copy its <strong>Value</strong></li>
-                                    <li>Paste it above as: <code>GSESSIONID=PASTE_HERE</code></li>
+                                    <li>Open <strong>glassdoor.com</strong> and make sure you're logged in</li>
+                                    <li>Right-click anywhere → <strong>Inspect</strong> (or press <strong>Ctrl+Shift+I</strong> / <strong>Cmd+Option+I</strong>)</li>
+                                    <li>Go to <strong>Application</strong> → <strong>Cookies</strong> → click the Glassdoor URL</li>
+                                    <li>Find <code>GSESSIONID</code> — double-click its <strong>Value</strong> and copy it</li>
+                                    <li>Paste the value into the field above (after <code>GSESSIONID=</code>, which is already filled in)</li>
                                 </ol>
                             </div>
                             <div id="instructions-generic" style="display:none">
                                 <strong>Getting your session cookie (30 sec, desktop browser only):</strong>
                                 <ol class="mt-1 mb-1">
                                     <li>Open the job site and make sure you're logged in</li>
-                                    <li>Press <strong>F12</strong> → <strong>Application</strong> → <strong>Cookies</strong> → click the site URL</li>
-                                    <li>Find the main session cookie and copy its <strong>Value</strong></li>
-                                    <li>Paste it above as: <code>cookie_name=VALUE</code></li>
+                                    <li>Right-click anywhere → <strong>Inspect</strong> (or press <strong>Ctrl+Shift+I</strong> / <strong>Cmd+Option+I</strong>)</li>
+                                    <li>Go to <strong>Application</strong> → <strong>Cookies</strong> → click the site URL</li>
+                                    <li>Find the main session cookie, copy its <strong>Value</strong>, and paste as <code>cookie_name=VALUE</code></li>
                                 </ol>
                             </div>
                             <span class="text-muted">⚠️ This step requires a desktop browser — DevTools aren't available on phones.</span>
@@ -261,7 +272,15 @@
 
         {% if summary %}
         <div class="card border-success mt-4">
-            <div class="card-header bg-success text-white fw-semibold">📝 Job Summary</div>
+            <div class="card-header bg-success text-white fw-semibold d-flex justify-content-between align-items-center">
+                <span>📝 Job Summary</span>
+                {% if from_cache %}
+                <span class="badge bg-white text-success" style="font-size:0.75rem; font-weight:600;">⚡ Instant — cached result</span>
+                {% endif %}
+                {% if used_vision %}
+                <span class="badge bg-white text-primary" style="font-size:0.75rem; font-weight:600;">👁 Read via image</span>
+                {% endif %}
+            </div>
             <div class="card-body job-summary">
                 {{ summary | safe }}
             </div>
@@ -276,6 +295,34 @@
 
     </div>
 
+    {% if top_reviews %}
+    <div class="mt-5 mb-2">
+        <h6 class="text-center text-muted mb-3" style="font-size:0.8rem; text-transform:uppercase; letter-spacing:.8px;">What users are saying</h6>
+        <div class="row g-3">
+            {% for review in top_reviews %}
+            <div class="col-12 col-md-{% if top_reviews|length == 1 %}12{% elif top_reviews|length == 2 %}6{% else %}4{% endif %}">
+                <div class="card border-0 shadow-sm h-100" style="border-radius:12px;">
+                    <div class="card-body p-3">
+                        <div class="mb-2" style="color:#ffc107; font-size:1rem; letter-spacing:2px;">
+                            {{ '★' * review.rating }}
+                        </div>
+                        <p class="mb-0" style="font-size:0.88rem; color:#495057; line-height:1.5;">
+                            "{{ review.message | truncate(160, true, '…') }}"
+                        </p>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <footer class="text-center mt-5 pb-3" style="font-size:0.82rem; color:#adb5bd;">
+        <a href="/feedback" class="text-muted">Leave feedback</a>
+        <span class="mx-2">·</span>
+        <span>Built by <strong style="color:#6c757d;">Anjaneya Sharma</strong>, <strong style="color:#6c757d;">Javier</strong> &amp; <strong style="color:#6c757d;">Ethan Wong</strong></span>
+    </footer>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         const jobUrlInput  = document.getElementById('job_url');
@@ -284,6 +331,15 @@
         const bsCollapse = new bootstrap.Collapse(cookieSection, { toggle: false });
         const submitBtn  = document.getElementById('submitBtn');
         const loadingMsg = document.getElementById('loadingMsg');
+        const apiKeyInput = document.getElementById('user_api_key');
+
+        // Restore saved API key from browser storage
+        const savedKey = localStorage.getItem('jh_groq_key');
+        if (savedKey && !apiKeyInput.value) {
+            apiKeyInput.value = savedKey;
+        }
+
+        const cookieInput = document.getElementById('session_cookie');
 
         const allInstructions = {
             linkedin:  document.getElementById('instructions-linkedin'),
@@ -305,27 +361,64 @@
             glassdoor: '<strong>Glassdoor detected</strong> — listings may need your <code>GSESSIONID</code> cookie. Paste it below.',
         };
 
+        const cookiePrefixes = {
+            linkedin:  'li_at=',
+            indeed:    'CTK=',
+            glassdoor: 'GSESSIONID=',
+        };
+
+        let currentSite = null;
+
         function updateCookieUI(url) {
             const site = detectSite(url);
             Object.values(allInstructions).forEach(el => el.style.display = 'none');
 
             if (site) {
                 bsCollapse.show();
+
+                const saved  = localStorage.getItem('jh_cookie_' + site);
+                const prefix = cookiePrefixes[site];
+
+                if (saved) {
+                    // Restore full saved cookie (already includes prefix)
+                    if (!cookieInput.value) cookieInput.value = saved;
+                    cookieSiteHint.innerHTML = hints[site] +
+                        ' <span class="badge bg-success ms-1" style="font-size:0.72rem;">✓ Cookie restored</span>';
+                } else {
+                    // Pre-fill just the prefix so user only needs to paste the value
+                    if (!cookieInput.value || cookieInput.value === (cookiePrefixes[currentSite] || '')) {
+                        cookieInput.value = prefix;
+                        // Move cursor to end so user can paste immediately
+                        cookieInput.setSelectionRange(prefix.length, prefix.length);
+                    }
+                    cookieSiteHint.innerHTML = hints[site];
+                }
+
                 cookieSiteHint.style.display = 'block';
-                cookieSiteHint.innerHTML = hints[site];
                 allInstructions[site].style.display = 'block';
             } else {
+                if (currentSite) cookieInput.value = '';
                 cookieSiteHint.style.display = 'none';
                 allInstructions.generic.style.display = 'block';
             }
+
+            currentSite = site;
         }
 
         jobUrlInput.addEventListener('input', () => updateCookieUI(jobUrlInput.value));
         jobUrlInput.addEventListener('paste', () => setTimeout(() => updateCookieUI(jobUrlInput.value), 50));
         if (jobUrlInput.value) updateCookieUI(jobUrlInput.value);
 
-        // Show loading state on submit
+        // Save API key + site cookie to browser storage, then show loading state
         document.getElementById('mainForm').addEventListener('submit', function () {
+            const key = apiKeyInput.value.trim();
+            if (key.startsWith('gsk_')) {
+                localStorage.setItem('jh_groq_key', key);
+            }
+            const cookie = cookieInput.value.trim();
+            if (cookie && currentSite) {
+                localStorage.setItem('jh_cookie_' + currentSite, cookie);
+            }
             submitBtn.disabled = true;
             submitBtn.textContent = 'Working…';
             loadingMsg.style.display = 'flex';
