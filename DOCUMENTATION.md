@@ -2,9 +2,15 @@
 
 ## Objectives
 
-JobHound exists to save job seekers time. Reading through job listings is repetitive — every page has the same structure but buries the important details in different places. JobHound automates that reading step: paste a URL, get a clean structured summary in seconds.
+### The Problem
 
-The three core objectives are:
+Finding and applying for jobs today is a messy, scattered process. Job seekers are forced to jump between a dozen different platforms — LinkedIn, Indeed, Glassdoor, company career sites, niche job boards — each with its own layout, terminology, and level of detail. Reading through listings to figure out whether a role is even worth applying to is slow and exhausting. Important details like salary, minimum qualifications, and the actual apply link are buried in different places on every page.
+
+This fragmentation contributes directly to **frictional unemployment** — the period of unemployment that occurs not because jobs don't exist, but because the process of matching job seekers to those jobs is inefficient and time-consuming. People spend hours parsing listings, miss opportunities because the process is too slow, or apply blindly without understanding what a role actually requires.
+
+JobHound exists to remove that friction. The goal is simple: paste any job URL from any platform, and get a clean, structured summary in seconds — so job seekers can spend their time applying to the right roles, not reading through the wrong ones.
+
+### Core Objectives
 
 1. **Extract what matters** — pull out job title, company, location, salary, minimum qualifications, nice-to-haves, day-to-day responsibilities, and a direct apply link from any job listing page.
 2. **Work across the whole web** — support job boards (LinkedIn, Indeed, Glassdoor, RemoteOK), company careers pages, and both single listings and search results pages.
