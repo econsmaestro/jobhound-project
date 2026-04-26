@@ -443,22 +443,26 @@ def index():
         # --- Input validation ---
         if not job_url:
             return render_template("index.html",
-                error="Please paste a job listing URL in the URL field.")
+                error="Please paste a job listing URL in the URL field.",
+                prefill_url=job_url)
 
         if not is_valid_url(job_url):
             return render_template("index.html",
                 error="That doesn't look like a valid web address. "
-                      "Please paste the full URL including 'https://' from your browser's address bar.")
+                      "Please paste the full URL including 'https://' from your browser's address bar.",
+                prefill_url=job_url)
 
         if not user_api_key:
             return render_template("index.html",
                 error="Please paste your Groq API key. "
-                      "You can get one for free at console.groq.com/keys — it takes about 2 minutes.")
+                      "You can get one for free at console.groq.com/keys — it takes about 2 minutes.",
+                prefill_url=job_url)
 
         if not user_api_key.startswith("gsk_"):
             return render_template("index.html",
                 error="That doesn't look like a Groq API key — they always start with 'gsk_'. "
-                      "Please copy it again from console.groq.com/keys.")
+                      "Please copy it again from console.groq.com/keys.",
+                prefill_url=job_url)
 
         # --- Serve from shared DB cache if available ---
         cached = get_cached_result(job_url)
@@ -474,7 +478,8 @@ def index():
         except Exception as e:
             return render_template("index.html",
                 error=friendly_error(e, context="scrape"),
-                show_cookie_hint=use_stealth)
+                show_cookie_hint=use_stealth,
+                prefill_url=job_url)
 
         if not content.success:
             site = urlparse(job_url).netloc.replace("www.", "")
@@ -482,10 +487,12 @@ def index():
                 return render_template("index.html",
                     error=f"{site} blocked our request. This can happen when the site requires you to be logged in. "
                           "Try pasting your session cookie below to let the app access it as you.",
-                    show_cookie_hint=True)
+                    show_cookie_hint=True,
+                    prefill_url=job_url)
             return render_template("index.html",
                 error="We couldn't load that page. It may be temporarily unavailable or blocking automated access. "
-                      "Please double-check the URL and try again.")
+                      "Please double-check the URL and try again.",
+                prefill_url=job_url)
 
         job_text = strip_base64_images(content.markdown or "")
         used_vision = False
@@ -504,13 +511,15 @@ def index():
                         error="The page loaded but the AI couldn't extract readable text from it, "
                               "even after trying to read it as an image. "
                               "The page may require a login — try pasting your session cookie below.",
-                        show_cookie_hint=True)
+                        show_cookie_hint=True,
+                        prefill_url=job_url)
             else:
                 return render_template("index.html",
                     error="The page loaded but didn't contain any readable text. "
                           "This usually means the site requires you to be logged in. "
                           "Try pasting your browser session cookie below.",
-                    show_cookie_hint=True)
+                    show_cookie_hint=True,
+                    prefill_url=job_url)
 
         if is_login_wall(job_text):
             site = urlparse(job_url).netloc.replace("www.", "")
@@ -518,7 +527,8 @@ def index():
                 error=f"{site} is showing a sign-in page instead of job listings. "
                       "To fix this: paste your browser session cookie in the "
                       "'Session Cookie (optional)' field below — see the step-by-step instructions next to it.",
-                show_cookie_hint=True)
+                show_cookie_hint=True,
+                prefill_url=job_url)
 
         # --- Truncate to avoid token limits ---
         if len(job_text) > MAX_CONTENT_CHARS:
@@ -565,7 +575,7 @@ Job content:
 
         except Exception as e:
             log_event(urlparse(job_url).netloc.replace("www.", ""), success=False)
-            return render_template("index.html", error=friendly_error(e, context="summarise"))
+            return render_template("index.html", error=friendly_error(e, context="summarise"), prefill_url=job_url)
 
         log_event(urlparse(job_url).netloc.replace("www.", ""), success=True)
         return render_template("index.html", summary=summary, used_vision=used_vision)
