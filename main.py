@@ -1,5 +1,7 @@
 import os
 import re
+import io
+import base64
 import time
 import json
 import traceback
@@ -335,6 +337,55 @@ def extract_text_from_screenshot(screenshot_url, api_key):
         return None
 
 
+def extract_text_from_uploaded_image(image_bytes, mime_type, api_key):
+    """Use vision model to OCR text from an uploaded image file."""
+    try:
+        b64 = base64.b64encode(image_bytes).decode("utf-8")
+        data_url = f"data:{mime_type};base64,{b64}"
+        client = Groq(api_key=api_key)
+        response = client.chat.completions.create(
+            model=VISION_MODEL,
+            messages=[{
+                "role": "user",
+                "content": [
+                    {"type": "image_url", "image_url": {"url": data_url}},
+                    {"type": "text", "text": (
+                        "This is a screenshot or photo of a job listing. "
+                        "Extract every piece of text you can see — job title, company, "
+                        "location, salary, requirements, responsibilities, and any apply links. "
+                        "Return the raw extracted text only, preserving structure. "
+                        "Do not add any commentary or explanation."
+                    )}
+                ]
+            }],
+            max_tokens=4096
+        )
+        extracted = response.choices[0].message.content.strip()
+        print(f"[VISION-UPLOAD] Extracted {len(extracted)} chars from uploaded image")
+        return extracted if len(extracted) > 30 else None
+    except Exception as e:
+        print(f"[VISION-UPLOAD ERROR] {e}")
+        return None
+
+
+def extract_text_from_uploaded_pdf(pdf_bytes):
+    """Extract readable text from an uploaded PDF file."""
+    try:
+        import pypdf
+        reader = pypdf.PdfReader(io.BytesIO(pdf_bytes))
+        parts = []
+        for page in reader.pages:
+            text = page.extract_text()
+            if text:
+                parts.append(text.strip())
+        result = "\n\n".join(parts).strip()
+        print(f"[PDF] Extracted {len(result)} chars from uploaded PDF")
+        return result or None
+    except Exception as e:
+        print(f"[PDF ERROR] {e}")
+        return None
+
+
 def try_summarize_with_retries(chain, job_text, retries=3, base_delay=5):
     for i in range(retries):
         try:
@@ -434,24 +485,19 @@ URGENCY_COLOURS = {
 }
 
 
+ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp", "image/gif"}
+MAX_UPLOAD_BYTES = 10 * 1024 * 1024  # 10 MB
+
+
 @app.route("/", methods=["GET", "POST"])
 def index():
     if request.method == "POST":
         job_url = request.form.get("job_url", "").strip()
         user_api_key = request.form.get("user_api_key", "").strip()
+        uploaded_file = request.files.get("job_file")
+        has_file = bool(uploaded_file and uploaded_file.filename)
 
-        # --- Input validation ---
-        if not job_url:
-            return render_template("index.html",
-                error="Please paste a job listing URL in the URL field.",
-                prefill_url=job_url)
-
-        if not is_valid_url(job_url):
-            return render_template("index.html",
-                error="That doesn't look like a valid web address. "
-                      "Please paste the full URL including 'https://' from your browser's address bar.",
-                prefill_url=job_url)
-
+        # --- Validate API key ---
         if not user_api_key:
             return render_template("index.html",
                 error="Please paste your Groq API key. "
@@ -464,71 +510,122 @@ def index():
                       "Please copy it again from console.groq.com/keys.",
                 prefill_url=job_url)
 
-        # --- Serve from shared DB cache if available ---
-        cached = get_cached_result(job_url)
-        if cached:
-            return render_template("index.html", summary=cached, from_cache=True)
-
-        session_cookie = request.form.get("session_cookie", "").strip() or None
-
-        # --- Scrape the page ---
-        try:
-            use_stealth = any(site in job_url for site in STEALTH_SITES)
-            content = scrape_with_retry(job_url, use_stealth, session_cookie=session_cookie)
-        except Exception as e:
+        # --- Need at least a URL or a file ---
+        if not has_file and not job_url:
             return render_template("index.html",
-                error=friendly_error(e, context="scrape"),
-                show_cookie_hint=use_stealth,
-                prefill_url=job_url)
+                error="Please paste a job URL or upload a screenshot / PDF.")
 
-        if not content.success:
-            site = urlparse(job_url).netloc.replace("www.", "")
-            if use_stealth:
-                return render_template("index.html",
-                    error=f"{site} blocked our request. This can happen when the site requires you to be logged in. "
-                          "Try pasting your session cookie below to let the app access it as you.",
-                    show_cookie_hint=True,
-                    prefill_url=job_url)
-            return render_template("index.html",
-                error="We couldn't load that page. It may be temporarily unavailable or blocking automated access. "
-                      "Please double-check the URL and try again.",
-                prefill_url=job_url)
-
-        job_text = strip_base64_images(content.markdown or "")
+        job_text = ""
         used_vision = False
+        source_label = "upload"
 
-        if len(job_text.strip()) < 50:
-            # Not enough text — try extracting from screenshot automatically
-            screenshot_url = getattr(content, "screenshot", None)
-            if screenshot_url:
-                print("[VISION] Sparse text detected, trying screenshot OCR...")
-                extracted = extract_text_from_screenshot(screenshot_url, user_api_key)
+        if has_file:
+            # ---- File upload path ----
+            file_bytes = uploaded_file.read()
+            if len(file_bytes) > MAX_UPLOAD_BYTES:
+                return render_template("index.html",
+                    error="That file is too large (max 10 MB). Please try a smaller screenshot or PDF.",
+                    prefill_url=job_url)
+
+            mime_type = uploaded_file.content_type or ""
+            fname = uploaded_file.filename.lower()
+
+            if mime_type == "application/pdf" or fname.endswith(".pdf"):
+                job_text = extract_text_from_uploaded_pdf(file_bytes) or ""
+                if not job_text.strip():
+                    return render_template("index.html",
+                        error="Couldn't extract any text from that PDF. "
+                              "It may be a scanned image-only PDF — try taking a screenshot instead.",
+                        prefill_url=job_url)
+
+            elif mime_type in ALLOWED_IMAGE_TYPES or any(fname.endswith(ext) for ext in (".jpg", ".jpeg", ".png", ".webp", ".gif")):
+                extracted = extract_text_from_uploaded_image(file_bytes, mime_type or "image/jpeg", user_api_key)
                 if extracted:
                     job_text = extracted
                     used_vision = True
                 else:
                     return render_template("index.html",
-                        error="The page loaded but the AI couldn't extract readable text from it, "
-                              "even after trying to read it as an image. "
-                              "The page may require a login — try pasting your session cookie below.",
-                        show_cookie_hint=True,
+                        error="The AI couldn't read any job content from that image. "
+                              "Make sure the screenshot clearly shows the job listing text.",
                         prefill_url=job_url)
             else:
                 return render_template("index.html",
-                    error="The page loaded but didn't contain any readable text. "
-                          "This usually means the site requires you to be logged in. "
-                          "Try pasting your browser session cookie below.",
+                    error="Unsupported file type. Please upload a screenshot (JPG, PNG, WebP) or a PDF.",
+                    prefill_url=job_url)
+
+        else:
+            # ---- URL path ----
+            if not is_valid_url(job_url):
+                return render_template("index.html",
+                    error="That doesn't look like a valid web address. "
+                          "Please paste the full URL including 'https://' from your browser's address bar.",
+                    prefill_url=job_url)
+
+            # Serve from shared DB cache if available
+            cached = get_cached_result(job_url)
+            if cached:
+                return render_template("index.html", summary=cached, from_cache=True, prefill_url=job_url)
+
+            session_cookie = request.form.get("session_cookie", "").strip() or None
+
+            # Scrape the page
+            try:
+                use_stealth = any(site in job_url for site in STEALTH_SITES)
+                content = scrape_with_retry(job_url, use_stealth, session_cookie=session_cookie)
+            except Exception as e:
+                return render_template("index.html",
+                    error=friendly_error(e, context="scrape"),
+                    show_cookie_hint=use_stealth,
+                    prefill_url=job_url)
+
+            if not content.success:
+                site = urlparse(job_url).netloc.replace("www.", "")
+                if use_stealth:
+                    return render_template("index.html",
+                        error=f"{site} blocked our request. This can happen when the site requires you to be logged in. "
+                              "Try pasting your session cookie below to let the app access it as you.",
+                        show_cookie_hint=True,
+                        prefill_url=job_url)
+                return render_template("index.html",
+                    error="We couldn't load that page. It may be temporarily unavailable or blocking automated access. "
+                          "Please double-check the URL and try again.",
+                    prefill_url=job_url)
+
+            job_text = strip_base64_images(content.markdown or "")
+
+            if len(job_text.strip()) < 50:
+                screenshot_url = getattr(content, "screenshot", None)
+                if screenshot_url:
+                    print("[VISION] Sparse text detected, trying screenshot OCR...")
+                    extracted = extract_text_from_screenshot(screenshot_url, user_api_key)
+                    if extracted:
+                        job_text = extracted
+                        used_vision = True
+                    else:
+                        return render_template("index.html",
+                            error="The page loaded but the AI couldn't extract readable text from it, "
+                                  "even after trying to read it as an image. "
+                                  "The page may require a login — try pasting your session cookie below.",
+                            show_cookie_hint=True,
+                            prefill_url=job_url)
+                else:
+                    return render_template("index.html",
+                        error="The page loaded but didn't contain any readable text. "
+                              "This usually means the site requires you to be logged in. "
+                              "Try pasting your browser session cookie below.",
+                        show_cookie_hint=True,
+                        prefill_url=job_url)
+
+            if is_login_wall(job_text):
+                site = urlparse(job_url).netloc.replace("www.", "")
+                return render_template("index.html",
+                    error=f"{site} is showing a sign-in page instead of job listings. "
+                          "To fix this: paste your browser session cookie in the "
+                          "'Session Cookie (optional)' field below — see the step-by-step instructions next to it.",
                     show_cookie_hint=True,
                     prefill_url=job_url)
 
-        if is_login_wall(job_text):
-            site = urlparse(job_url).netloc.replace("www.", "")
-            return render_template("index.html",
-                error=f"{site} is showing a sign-in page instead of job listings. "
-                      "To fix this: paste your browser session cookie in the "
-                      "'Session Cookie (optional)' field below — see the step-by-step instructions next to it.",
-                show_cookie_hint=True,
-                prefill_url=job_url)
+            source_label = urlparse(job_url).netloc.replace("www.", "")
 
         # --- Truncate to avoid token limits ---
         if len(job_text) > MAX_CONTENT_CHARS:
@@ -571,13 +668,14 @@ Job content:
 
             raw_summary = try_summarize_with_retries(chain, job_text)
             summary = md.markdown(raw_summary, extensions=["nl2br"])
-            set_cached_result(job_url, summary)
+            if not has_file and job_url:
+                set_cached_result(job_url, summary)
 
         except Exception as e:
-            log_event(urlparse(job_url).netloc.replace("www.", ""), success=False)
+            log_event(source_label, success=False)
             return render_template("index.html", error=friendly_error(e, context="summarise"), prefill_url=job_url)
 
-        log_event(urlparse(job_url).netloc.replace("www.", ""), success=True)
+        log_event(source_label, success=True)
         return render_template("index.html", summary=summary, used_vision=used_vision)
 
     # Load top-rated reviews to display on home page

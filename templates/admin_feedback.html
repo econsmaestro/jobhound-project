@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Feedback Review — JobHound Admin</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background: #f1f3f5; padding: 24px 0 48px; }
+        .container { max-width: 960px; padding-left: 16px; padding-right: 16px; }
+        .stat-card { background: #fff; border-radius: 10px; padding: 20px; text-align: center; border: 1px solid #dee2e6; }
+        .stat-value { font-size: 2rem; font-weight: 800; line-height: 1; }
+        .stat-label { font-size: 0.82rem; color: #6c757d; margin-top: 4px; }
+        .stars { color: #ffc107; font-size: 1rem; letter-spacing: 1px; }
+        .stars-empty { color: #dee2e6; }
+        .feedback-card { background: #fff; border-radius: 8px; border: 1px solid #dee2e6; padding: 16px; margin-bottom: 12px; }
+        .feedback-card .meta { font-size: 0.8rem; color: #6c757d; }
+        .badge-cat { font-size: 0.75rem; }
+        .filter-bar { background: #fff; border-radius: 8px; padding: 14px 16px; margin-bottom: 16px; border: 1px solid #dee2e6; }
+        h1 { font-weight: 800; font-size: 1.5rem; }
+        .prioritiser-box { background: #fff; border-radius: 10px; border: 1px solid #dee2e6; margin-bottom: 28px; overflow: hidden; }
+        .prioritiser-header { padding: 16px 20px; border-bottom: 1px solid #f1f3f5; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+        .prioritiser-title { font-weight: 700; font-size: 1rem; margin: 0; }
+        .prioritiser-sub { font-size: 0.8rem; color: #6c757d; margin: 2px 0 0; }
+        .priority-rank { font-size: 1.1rem; font-weight: 800; color: #212529; width: 28px; text-align: center; flex-shrink: 0; }
+        .quote-cell { font-size: 0.82rem; color: #6c757d; font-style: italic; }
+        .action-cell { font-size: 0.83rem; }
+        .spinner-inline { width: 14px; height: 14px; border: 2px solid #dee2e6; border-top-color: #0d6efd; border-radius: 50%; animation: spin .7s linear infinite; display: inline-block; vertical-align: middle; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .table > :not(caption) > * > * { padding: .6rem .75rem; vertical-align: middle; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
+        <div>
+            <h1>🐾 Feedback Review</h1>
+            <div class="text-muted" style="font-size:0.85rem">JobHound Admin · {{ total }} submissions</div>
+        </div>
+        <a href="/admin/analytics?key={{ admin_key }}" class="text-muted" style="font-size:.85rem">Analytics ↗</a>
+        <a href="/" class="btn btn-outline-secondary btn-sm">← App</a>
+    </div>
+
+    <!-- Stats row -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md-3">
+            <div class="stat-card">
+                <div class="stat-value">{{ total }}</div>
+                <div class="stat-label">Total responses</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="stat-card">
+                <div class="stat-value">{{ avg_rating or '—' }}</div>
+                <div class="stat-label">Avg rating / 5</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="stat-card">
+                <div class="stat-value">{{ rated_count }}</div>
+                <div class="stat-label">Rated submissions</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="stat-card">
+                <div class="stat-value text-danger">{{ bug_count }}</div>
+                <div class="stat-label">Bug reports</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Feedback Prioritiser -->
+    <div class="prioritiser-box">
+        <div class="prioritiser-header">
+            <div>
+                <p class="prioritiser-title">🧠 Feedback Prioritiser</p>
+                <p class="prioritiser-sub">AI-grouped themes ranked by how many users raised them — re-runs every time you open this page</p>
+            </div>
+            {% if priorities %}
+            <span class="badge bg-light text-dark border" style="font-size:.8rem;">{{ priorities|length }} themes · {{ total }} submissions analysed</span>
+            {% endif %}
+        </div>
+
+        {% if priorities %}
+        <div class="table-responsive">
+            <table class="table table-hover mb-0" style="font-size:.9rem;">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width:40px;">#</th>
+                        <th>Theme</th>
+                        <th style="width:80px;" class="text-center">Users</th>
+                        <th style="width:90px;">Urgency</th>
+                        <th>Representative quote</th>
+                        <th>Recommended action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in priorities %}
+                    <tr>
+                        <td><span class="priority-rank">{{ p.priority }}</span></td>
+                        <td><strong>{{ p.theme }}</strong></td>
+                        <td class="text-center">
+                            <span class="badge rounded-pill bg-dark">{{ p.user_count }}</span>
+                        </td>
+                        <td>
+                            <span class="badge bg-{{ urgency_colours.get(p.urgency, 'secondary') }}">{{ p.urgency }}</span>
+                        </td>
+                        <td class="quote-cell">"{{ p.sample_quote }}"</td>
+                        <td class="action-cell">{{ p.action }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% elif total >= 2 %}
+        <div class="text-center text-muted py-4" style="font-size:.88rem;">
+            <span class="spinner-inline me-2"></span> Analysis unavailable — check that your server-side Groq key is set correctly.
+        </div>
+        {% else %}
+        <div class="text-center text-muted py-4" style="font-size:.88rem;">
+            Waiting for more feedback — prioritiser activates once 2 or more submissions are in the database.
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Filter bar -->
+    <div class="filter-bar">
+        <form method="GET" class="d-flex flex-wrap gap-2 align-items-center">
+            <input type="hidden" name="key" value="{{ admin_key }}">
+            <select name="category" class="form-select form-select-sm" style="width:auto" onchange="this.form.submit()">
+                <option value="">All categories</option>
+                <option value="summary_quality" {% if current_filter=='summary_quality' %}selected{% endif %}>Summary quality</option>
+                <option value="site_support" {% if current_filter=='site_support' %}selected{% endif %}>Site support</option>
+                <option value="linkedin_cookie" {% if current_filter=='linkedin_cookie' %}selected{% endif %}>LinkedIn cookie</option>
+                <option value="speed" {% if current_filter=='speed' %}selected{% endif %}>Speed</option>
+                <option value="ui" {% if current_filter=='ui' %}selected{% endif %}>Design / UX</option>
+                <option value="bug" {% if current_filter=='bug' %}selected{% endif %}>Bug reports</option>
+                <option value="other" {% if current_filter=='other' %}selected{% endif %}>Other</option>
+            </select>
+            <select name="rating" class="form-select form-select-sm" style="width:auto" onchange="this.form.submit()">
+                <option value="">All ratings</option>
+                <option value="5" {% if current_rating=='5' %}selected{% endif %}>★★★★★ (5)</option>
+                <option value="4" {% if current_rating=='4' %}selected{% endif %}>★★★★ (4)</option>
+                <option value="3" {% if current_rating=='3' %}selected{% endif %}>★★★ (3)</option>
+                <option value="2" {% if current_rating=='2' %}selected{% endif %}>★★ (2)</option>
+                <option value="1" {% if current_rating=='1' %}selected{% endif %}>★ (1)</option>
+            </select>
+            {% if current_filter or current_rating %}
+            <a href="/admin/feedback?key={{ admin_key }}" class="btn btn-outline-secondary btn-sm">Clear filters</a>
+            {% endif %}
+            <span class="text-muted ms-auto" style="font-size:0.82rem">Showing {{ rows|length }} of {{ total }}</span>
+        </form>
+    </div>
+
+    <!-- Feedback entries -->
+    {% if rows %}
+        {% for row in rows %}
+        <div class="feedback-card">
+            <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-2">
+                <div>
+                    {% if row.rating %}
+                    <span class="stars">{{ '★' * row.rating }}</span><span class="stars-empty">{{ '★' * (5 - row.rating) }}</span>
+                    {% else %}
+                    <span class="text-muted" style="font-size:0.85rem">No rating</span>
+                    {% endif %}
+                    {% if row.category %}
+                    <span class="badge bg-secondary badge-cat ms-2">{{ row.category | replace('_', ' ') }}</span>
+                    {% endif %}
+                </div>
+                <div class="meta">#{{ row.id }} · {{ row.submitted_at.strftime('%d %b %Y, %H:%M') }}</div>
+            </div>
+            <p class="mb-0" style="white-space: pre-wrap; font-size: 0.93rem;">{{ row.message }}</p>
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="text-center text-muted py-5">No feedback yet matching these filters.</div>
+    {% endif %}
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<footer class="text-center mt-4 pb-3" style="font-size:0.82rem; color:#adb5bd;">
+    Built by <strong style="color:#6c757d;">Anjaneya Sharma</strong>, <strong style="color:#6c757d;">Javier</strong> &amp; <strong style="color:#6c757d;">Ethan Wong</strong>
+</footer>
+</body>
+</html>

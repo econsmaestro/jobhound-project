@@ -129,25 +129,24 @@
         <div class="jh-header">
             <span class="icon">🐾</span>
             <h1>JobHound</h1>
-            <div class="tagline">Paste a job URL — get an AI summary in seconds</div>
+            <div class="tagline">Paste a job URL or upload a screenshot — get an AI summary in seconds</div>
         </div>
 
         <div class="info-box">
-            <strong>Works with any job page:</strong>
+            <strong>Three ways to use JobHound:</strong>
             <ul>
-                <li><strong>Job boards</strong> — LinkedIn, Indeed, Glassdoor, RemoteOK &amp; more</li>
-                <li><strong>Company careers pages</strong> — e.g. <code>careers.google.com</code>, any /careers page</li>
-                <li><strong>Single listing or search results</strong> — both work</li>
+                <li><strong>Paste a URL</strong> — from LinkedIn, Indeed, Glassdoor, RemoteOK, company careers pages &amp; more</li>
+                <li><strong>Upload a screenshot</strong> — take a photo or screenshot of any job listing on your phone</li>
+                <li><strong>Upload a PDF</strong> — if a job description was shared as a file</li>
             </ul>
-            <span class="text-muted">Private LinkedIn listings need a session cookie — it appears automatically when you paste a LinkedIn URL.</span>
             <hr class="my-2" style="border-color:#d0e4f7;">
             <span class="text-muted" style="font-size:0.83rem;">
-                <strong>Supported formats:</strong> standard HTML job pages with readable text.
-                <strong>Not supported:</strong> PDFs, image-only pages, or pages that require JavaScript to display any content.
+                <strong>On mobile?</strong> Open the job app → tap <strong>Share</strong> → <strong>Copy Link</strong>, then paste the URL here.
+                For LinkedIn and Glassdoor you may still need a session cookie (from a desktop browser) to bypass their login wall.
             </span>
         </div>
 
-        <form method="POST" novalidate id="mainForm">
+        <form method="POST" enctype="multipart/form-data" novalidate id="mainForm">
 
             <div class="mb-4">
                 <label for="user_api_key" class="form-label">
@@ -170,7 +169,7 @@
                 </div>
             </div>
 
-            <div class="mb-4">
+            <div class="mb-3">
                 <label for="job_url" class="form-label">Job URL</label>
                 <input
                     type="url"
@@ -179,7 +178,6 @@
                     name="job_url"
                     placeholder="Paste job listing or search results URL here"
                     value="{{ prefill_url or '' }}"
-                    required
                     pattern="https?://.+"
                     inputmode="url"
                     autocorrect="off"
@@ -187,6 +185,20 @@
                     spellcheck="false"
                 >
                 <div class="form-text mt-1">Copy the URL from your browser's address bar</div>
+            </div>
+
+            <div class="mb-4 text-center text-muted" style="font-size:0.85rem; letter-spacing:.5px;">— or —</div>
+
+            <div class="mb-4">
+                <label for="job_file" class="form-label">Upload Screenshot or PDF</label>
+                <input
+                    type="file"
+                    class="form-control"
+                    id="job_file"
+                    name="job_file"
+                    accept="image/jpeg,image/png,image/webp,image/gif,application/pdf,.jpg,.jpeg,.png,.webp,.gif,.pdf"
+                >
+                <div class="form-text mt-1">JPG, PNG, WebP, GIF or PDF — max 10 MB</div>
             </div>
 
             <div class="mb-4">
@@ -267,7 +279,7 @@
             </button>
             <div class="spinner-text" id="loadingMsg">
                 <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
-                Scraping &amp; summarising — this takes 15–30 seconds…
+                <span id="loadingText">Scraping &amp; summarising — this takes 15–30 seconds…</span>
             </div>
         </form>
 
@@ -324,12 +336,29 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         const jobUrlInput  = document.getElementById('job_url');
+        const jobFileInput = document.getElementById('job_file');
         const cookieSection = document.getElementById('cookieSection');
         const cookieSiteHint = document.getElementById('cookieSiteHint');
         const bsCollapse = new bootstrap.Collapse(cookieSection, { toggle: false });
         const submitBtn  = document.getElementById('submitBtn');
         const loadingMsg = document.getElementById('loadingMsg');
         const apiKeyInput = document.getElementById('user_api_key');
+
+        // Mutual-clear: typing a URL clears any chosen file, and vice-versa
+        jobUrlInput.addEventListener('input', function () {
+            if (jobUrlInput.value.trim()) {
+                jobFileInput.value = '';
+            }
+        });
+        jobFileInput.addEventListener('change', function () {
+            if (jobFileInput.files.length > 0) {
+                jobUrlInput.value = '';
+                // Hide cookie section when using a file — cookies are URL-only
+                bsCollapse.hide();
+                cookieSiteHint.style.display = 'none';
+                currentSite = null;
+            }
+        });
 
         // Restore saved API key from browser storage
         const savedKey = localStorage.getItem('jh_groq_key');
@@ -419,6 +448,10 @@
             }
             submitBtn.disabled = true;
             submitBtn.textContent = 'Working…';
+            const usingFile = jobFileInput.files.length > 0;
+            document.getElementById('loadingText').textContent = usingFile
+                ? 'Reading your file & summarising — this takes 15–30 seconds…'
+                : 'Scraping & summarising — this takes 15–30 seconds…';
             loadingMsg.style.display = 'flex';
         });
     </script>
